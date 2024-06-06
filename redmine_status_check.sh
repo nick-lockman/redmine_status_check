@@ -8,17 +8,20 @@ TODAY=`${DATE} +%Y-%m-%d`
 SCRIPT_NAME=$(basename "$0")
 CONF_PATH=/usr/local/scripts/${SCRIPT_NAME%.*}/${SCRIPT_NAME%.*}.conf
 
+# command line params
 if test -f ${CONF_PATH} ; then
   . ${CONF_PATH} ; else
   echo 'Error: no .conf file. Exit!' && exit 1
 fi
 
+# get status from id
 redmine_status_from_id=$(${CURL} -X GET -G ${ISSUE_STATUS_URL} \
         -H "Content-type: application/json" \
         -u ${API_KEY}: \
         | jq --arg status_from "${STATUS_FROM}" \
         '.issue_statuses | map(select(.name==$status_from))[0].id | select( . != null )')
 
+# get status to id
 echo ${redmine_status_from_id}
 [ -z ${redmine_status_from_id} ] && echo "`date`: error: status from not found" >> ${LOG_PATH} && exit 1
 
@@ -31,6 +34,7 @@ redmine_status_to_id=$(${CURL} -X GET -G ${ISSUE_STATUS_URL} \
 echo ${redmine_status_to_id}
 [ -z ${redmine_status_to_id} ] && echo "`date`: error: status to not found" >> ${LOG_PATH} && exit 1
 
+# get status ids
 redmine_issue_ids=$(${CURL} -X GET -G ${ISSUE_URL} \
         -H "Content-type: application/json" \
         -d c[]="status" \
@@ -50,6 +54,7 @@ issue_update_params=$(jq --null-input \
                          --arg status_to "${redmine_status_to_id}" \
                          '{"issue":{"status_id": $status_to}}')
 
+# update statuses
 for i in ${redmine_issue_ids} ; do
         ${CURL} -v -X PUT "${REDMINE_URL}/issues/${i}.json" \
                -H "Content-type: application/json" \
